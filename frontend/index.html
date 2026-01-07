@@ -1,0 +1,224 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8" />
+<title>ระบบจัดการคะแนน</title>
+<link href="https://fonts.googleapis.com/css2?family=Prompt&display=swap" rel="stylesheet">
+
+<style>
+*{box-sizing:border-box;font-family:'Prompt',sans-serif}
+body{margin:0;background:#f5f7fb}
+header{background:#fff;padding:16px 24px;font-weight:600;font-size:20px}
+.container{display:grid;grid-template-columns:320px 1fr;gap:20px;padding:20px}
+.card{background:#fff;border-radius:12px;padding:16px;box-shadow:0 2px 6px rgba(0,0,0,.05)}
+.levels button{margin:4px;padding:6px 14px;border-radius:10px;border:none;background:#eef2ff;cursor:pointer}
+.levels .active{background:#2563eb;color:#fff}
+.assign-item{display:flex;justify-content:space-between;margin-bottom:10px}
+.btn{border:none;border-radius:8px;padding:6px 10px;cursor:pointer}
+.btn-add{background:#0ea5e9;color:#fff}
+.btn-del{background:#fecaca}
+table{width:100%;border-collapse:collapse}
+th,td{padding:10px;border-bottom:1px solid #e5e7eb;text-align:center}
+th{background:#e0f2fe}
+input.score{width:60px;padding:6px;border-radius:8px;border:1px solid #cbd5f5;text-align:center}
+.grade{padding:4px 10px;border-radius:999px;color:#fff}
+.grade.A{background:#22c55e}
+.grade.B{background:#10b981}
+.grade.C{background:#3b82f6}
+.grade.D{background:#f59e0b}
+.grade.F{background:#ef4444}
+</style>
+</head>
+
+<body>
+
+<header>
+🎓 ระบบจัดการคะแนน
+<small style="font-weight:400;color:#64748b"> ป.1 – ม.6</small>
+</header>
+
+<div class="container">
+
+<!-- ซ้าย -->
+<div>
+  <!-- เลือกระดับชั้น -->
+  <div class="card">
+    <h4 id="classTitle">เลือกระดับชั้น: ป.1</h4>
+    <div class="levels">
+      <button class="active" onclick="changeClass('ป.1',this)">ป.1</button>
+      <button onclick="changeClass('ป.2',this)">ป.2</button>
+      <button onclick="changeClass('ป.3',this)">ป.3</button>
+      <button onclick="changeClass('ป.4',this)">ป.4</button>
+      <button onclick="changeClass('ป.5',this)">ป.5</button>
+      <button onclick="changeClass('ป.6',this)">ป.6</button><br>
+      <button onclick="changeClass('ม.1',this)">ม.1</button>
+      <button onclick="changeClass('ม.2',this)">ม.2</button>
+      <button onclick="changeClass('ม.3',this)">ม.3</button>
+      <button onclick="changeClass('ม.4',this)">ม.4</button>
+      <button onclick="changeClass('ม.5',this)">ม.5</button>
+      <button onclick="changeClass('ม.6',this)">ม.6</button>
+    </div>
+  </div>
+
+  <!-- งาน -->
+  <div class="card">
+    <div style="display:flex;justify-content:space-between">
+      <h4>งานที่มอบหมาย</h4>
+      <button class="btn btn-add" onclick="addAssignment()">+ เพิ่มงาน</button>
+    </div>
+    <div id="assignmentList"></div>
+  </div>
+</div>
+
+<!-- ขวา -->
+<div class="card">
+  <div style="display:flex;justify-content:space-between">
+    <h4>รายชื่อนักเรียน</h4>
+    <button class="btn btn-add" onclick="addStudent()">+ เพิ่มนักเรียน</button>
+  </div>
+
+  <table>
+    <thead>
+      <tr id="tableHead"></tr>
+    </thead>
+    <tbody id="students"></tbody>
+  </table>
+</div>
+
+</div>
+
+<script>
+let currentClass = 'ป.1';
+let assignments = [];
+
+/* เปลี่ยนชั้น */
+function changeClass(cls, btn){
+  currentClass = cls;
+  document.getElementById('classTitle').innerText = `เลือกระดับชั้น: ${cls}`;
+  document.querySelectorAll('.levels button').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  loadAll();
+}
+
+/* โหลดทั้งหมด */
+async function loadAll(){
+  await loadAssignments();
+  await loadStudents();
+}
+
+/* งาน */
+async function loadAssignments(){
+  const res = await fetch(`http://localhost:3000/api/assignments?class=${currentClass}`);
+  assignments = await res.json();
+
+  const list = document.getElementById('assignmentList');
+  list.innerHTML = '';
+
+  assignments.forEach(a=>{
+    list.innerHTML += `
+      <div class="assign-item">
+        <div>${a.name}<br><small>${a.max_score} คะแนน</small></div>
+        <button class="btn btn-del" onclick="deleteAssignment(${a.id})">🗑️</button>
+      </div>
+    `;
+  });
+
+  const head = document.getElementById('tableHead');
+  head.innerHTML = `
+    <th>ลำดับ</th>
+    <th>รหัส</th>
+    <th>ชื่อ-สกุล</th>
+  `;
+
+  assignments.forEach(a=>{
+    head.innerHTML += `<th>${a.name}</th>`;
+  });
+
+  head.innerHTML += `<th>%</th><th>เกรด</th><th>จัดการ</th>`;
+}
+
+/* นักเรียน */
+async function loadStudents(){
+  const res = await fetch(`http://localhost:3000/api/students?class=${currentClass}`);
+  const data = await res.json();
+  const tb = document.getElementById('students');
+  tb.innerHTML = '';
+
+  data.forEach((s,i)=>{
+    let row = `
+      <tr>
+        <td>${i+1}</td>
+        <td>${s.code}</td>
+        <td>${s.name}</td>
+    `;
+
+    assignments.forEach(a=>{
+      const sc = s.scores.find(x=>x.id===a.id);
+      row += `
+        <td>
+          <input class="score" value="${sc?.score||0}"
+            onchange="saveScore(${s.id},${a.id},this.value)">
+        </td>`;
+    });
+
+    row += `
+      <td>${s.percent}%</td>
+      <td><span class="grade ${s.grade}">${s.grade}</span></td>
+      <td><button class="btn btn-del" onclick="delStudent(${s.id})">🗑️</button></td>
+      </tr>`;
+    tb.innerHTML += row;
+  });
+}
+
+/* CRUD */
+async function saveScore(student_id, assignment_id, score){
+  await fetch('http://localhost:3000/api/scores',{
+    method:'PUT',
+    headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({ student_id, assignment_id, score })
+  });
+}
+
+async function addAssignment(){
+  const name = prompt("ชื่องาน");
+  const max = prompt("คะแนนเต็ม");
+  if(!name || !max) return;
+
+  await fetch('http://localhost:3000/api/assignments',{
+    method:'POST',
+    headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({ name, max_score:max, className:currentClass })
+  });
+
+  loadAll(); // 🔥 ดีกว่า loadAssignments()
+}
+
+async function deleteAssignment(id){
+  if(!confirm("ลบงานนี้?")) return;
+  await fetch(`http://localhost:3000/api/assignments/${id}`,{method:'DELETE'});
+  loadAssignments();
+}
+
+async function addStudent(){
+  const code = prompt("รหัส");
+  const name = prompt("ชื่อ");
+  if(!code||!name) return;
+  await fetch('http://localhost:3000/api/students',{
+    method:'POST',
+    headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({code,name,className:currentClass})
+  });
+  loadStudents();
+}
+
+async function delStudent(id){
+  if(!confirm("ลบนักเรียน?")) return;
+  await fetch(`http://localhost:3000/api/students/${id}`,{method:'DELETE'});
+  loadStudents();
+}
+
+loadAll();
+</script>
+
+</body>
+</html>

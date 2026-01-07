@@ -1,0 +1,218 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<title>ตัดเกรด</title>
+<link href="https://fonts.googleapis.com/css2?family=Prompt&display=swap" rel="stylesheet">
+
+<style>
+*{box-sizing:border-box;font-family:'Prompt',sans-serif}
+body{margin:0;background:#f3f6f9}
+.header{background:#24384d;color:#fff;padding:14px 24px}
+.filter,.card{background:#fff;margin:16px;padding:12px;border-radius:8px}
+.filter{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}
+label{font-size:12px;color:#64748b}
+select,input{padding:6px;width:100%}
+table{width:100%;border-collapse:collapse;margin-top:10px}
+th,td{border:1px solid #e5e7eb;padding:8px;text-align:center}
+th{background:#e6f0fb}
+button{padding:6px 14px;border:none;border-radius:6px;cursor:pointer}
+.btn-save{background:#22c55e;color:#fff}
+.grade-cell{font-weight:600;background:#f1f5f9}
+/* ===== Layout ===== */
+.layout{
+  display:flex;
+  min-height:100vh;
+}
+
+/* ===== Sidebar ===== */
+.sidebar{
+  width:220px;
+  background:#2f2f2f;
+  color:#fff;
+  display:flex;
+  flex-direction:column;
+}
+
+.sidebar-header{
+  padding:16px;
+  font-size:18px;
+  font-weight:bold;
+  text-align:center;
+  background:#1f2937;
+  border-bottom:1px solid #374151;
+}
+
+.sidebar-menu{
+  padding:10px;
+}
+
+.sidebar-menu .menu{
+  display:block;
+  padding:10px 12px;
+  margin-bottom:6px;
+  color:#fff;
+  text-decoration:none;
+  border-radius:6px;
+  background:#374151;
+  font-size:14px;
+}
+
+.sidebar-menu .menu:hover{
+  background:#4b5563;
+}
+
+.sidebar-menu .menu.active{
+  background:#2563eb;
+}
+
+/* ===== Content ===== */
+.content{
+  flex:1;
+  background:#f3f6f9;
+}
+
+</style>
+</head>
+
+<body>
+<div class="layout">
+
+  <!-- ===== Sidebar ===== -->
+  <aside class="sidebar">
+    <div class="sidebar-header">
+      🎓 โรงเรียนตัวอย่าง
+    </div>
+
+    <nav class="sidebar-menu">
+      <a href="score.html" class="menu ">📊 คะแนน</a>
+      <a href="grade.html" class="menu active">🧮 ตัดเกรด</a>
+    </nav>
+  </aside>
+  <main class="content">
+
+<div class="header">
+  <h2>🎓 ตัดเกรด (Fix A–F)</h2>
+</div>
+
+<div class="filter">
+  <div>
+    <label>ปีการศึกษา</label>
+    <select id="year"></select>
+  </div>
+  <div>
+    <label>ภาคเรียน</label>
+    <select id="semester"></select>
+  </div>
+  <div>
+    <label>ระดับชั้น</label>
+    <select id="grade"></select>
+  </div>
+  <div>
+    <label>วิชา</label>
+    <select id="subject"></select>
+  </div>
+</div>
+
+<div class="card">
+  <h3>กำหนดช่วงคะแนนตัดเกรด</h3>
+
+  <table>
+    <thead>
+      <tr>
+        <th style="width:40%">เกรด</th>
+        <th>คะแนนขั้นต่ำ</th>
+      </tr>
+    </thead>
+    <tbody id="gradeTable"></tbody>
+  </table>
+
+  <div style="margin-top:10px;text-align:right">
+    <button class="btn-save" onclick="saveRanges()">💾 บันทึก</button>
+  </div>
+</div>
+
+<script>
+const API = "http://localhost:3000/api";
+
+/* 🔒 FIXED GRADES */
+const FIXED_GRADES = ["A","B+","B","C+","C","D+","D","F"];
+
+/* ===== Load Meta ===== */
+async function loadMeta(){
+  const m = await fetch(API+"/meta").then(r=>r.json());
+
+  year.innerHTML = m.years.map(y=>`<option value="${y.id}">${y.year}</option>`).join('');
+  semester.innerHTML = m.semesters.map(s=>`<option value="${s.id}">${s.name}</option>`).join('');
+  grade.innerHTML = m.grades.map(g=>`<option value="${g.id}">${g.name}</option>`).join('');
+  subject.innerHTML = m.subjects.map(s=>`<option value="${s.id}">${s.name}</option>`).join('');
+}
+
+/* ===== Load Grade Ranges ===== */
+async function loadRanges(){
+  if(!year.value||!semester.value||!grade.value||!subject.value){
+    gradeTable.innerHTML='';
+    return;
+  }
+
+  const r = await fetch(
+    `${API}/grade-ranges?grade_id=${grade.value}&subject_id=${subject.value}&academic_year_id=${year.value}&semester_id=${semester.value}`
+  ).then(r=>r.json());
+
+  const map = {};
+  r.forEach(x => map[x.grade] = x.min_score);
+
+  gradeTable.innerHTML = FIXED_GRADES.map(g => `
+    <tr>
+      <td class="grade-cell">${g}</td>
+      <td>
+        <input type="number" value="${map[g] ?? ''}" />
+      </td>
+    </tr>
+  `).join('');
+}
+
+/* ===== Save ===== */
+async function saveRanges(){
+  const rows = [...gradeTable.querySelectorAll("tr")];
+
+  const ranges = rows.map(r => ({
+    min_score: Number(r.children[1].querySelector("input").value || 0)
+  }));
+
+  const res = await fetch(API+"/grade-ranges",{
+    method:"POST",
+    headers:{ "Content-Type":"application/json" },
+    body: JSON.stringify({
+      grade_id: grade.value,
+      subject_id: subject.value,
+      academic_year_id: year.value,
+      semester_id: semester.value,
+      ranges
+    })
+  });
+
+  if(!res.ok){
+    alert("❌ บันทึกไม่สำเร็จ");
+    return;
+  }
+
+  alert("✅ บันทึกช่วงเกรดเรียบร้อย");
+
+  // ⭐ สำคัญ: แจ้งหน้าอื่น
+  localStorage.setItem("GRADE_UPDATED", Date.now());
+}
+
+
+/* ===== Events ===== */
+["year","semester","grade","subject"].forEach(id=>{
+  document.getElementById(id).addEventListener("change",loadRanges);
+});
+
+loadMeta();
+</script>
+    </main>
+</div>
+
+</body>
+</html>

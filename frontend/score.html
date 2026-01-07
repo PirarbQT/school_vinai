@@ -2,7 +2,7 @@
 <html lang="th">
 <head>
 <meta charset="UTF-8">
-<title>ระบบตัดเกรด</title>
+<title>คะแนน</title>
 <link href="https://fonts.googleapis.com/css2?family=Prompt&display=swap" rel="stylesheet">
 
 <style>
@@ -55,17 +55,82 @@ input.score{width:60px;text-align:center}
   background:#fff;padding:16px;border-radius:10px;width:360px
 }
 .modal-box h3{margin-top:0}
-.modal-box input, .modal-box select{
+.modal-box input,.modal-box select{
   width:100%;padding:6px;margin-bottom:10px
 }
+/* ===== Layout ===== */
+.layout{
+  display:flex;
+  min-height:100vh;
+}
+
+/* ===== Sidebar ===== */
+.sidebar{
+  width:220px;
+  background:#2f2f2f;
+  color:#fff;
+  display:flex;
+  flex-direction:column;
+}
+
+.sidebar-header{
+  padding:16px;
+  font-size:18px;
+  font-weight:bold;
+  text-align:center;
+  background:#1f2937;
+  border-bottom:1px solid #374151;
+}
+
+.sidebar-menu{
+  padding:10px;
+}
+
+.sidebar-menu .menu{
+  display:block;
+  padding:10px 12px;
+  margin-bottom:6px;
+  color:#fff;
+  text-decoration:none;
+  border-radius:6px;
+  background:#374151;
+  font-size:14px;
+}
+
+.sidebar-menu .menu:hover{
+  background:#4b5563;
+}
+
+.sidebar-menu .menu.active{
+  background:#2563eb;
+}
+
+/* ===== Content ===== */
+.content{
+  flex:1;
+  background:#f3f6f9;
+}
+
 </style>
 </head>
-
 <body>
+<div class="layout">
 
+  <!-- ===== Sidebar ===== -->
+  <aside class="sidebar">
+    <div class="sidebar-header">
+      🎓 โรงเรียนตัวอย่าง
+    </div>
+
+    <nav class="sidebar-menu">
+      <a href="score.html" class="menu active">📊 คะแนน</a>
+      <a href="grade.html" class="menu">🧮 ตัดเกรด</a>
+    </nav>
+  </aside>
+  <main class="content">
 <!-- ===== Header ===== -->
 <div class="header">
-  <div>🎓 ระบบตัดเกรด</div>
+  <div>🎓 คะแนน</div>
   <div class="actions">
     <button class="btn-add" onclick="openAddStudent()">➕ นักเรียน</button>
     <button class="btn-add" onclick="openAddItem()">➕ งาน</button>
@@ -95,10 +160,10 @@ input.score{width:60px;text-align:center}
 </table>
 </div>
 
-<!-- ===== Modal: Student ===== -->
+<!-- ===== Student Modal ===== -->
 <div class="modal" id="studentModal">
   <div class="modal-box">
-    <h3 id="studentTitle">นักเรียน</h3>
+    <h3 id="studentTitle"></h3>
     <label>เลขที่</label>
     <input id="stdCode">
     <label>ชื่อ - นามสกุล</label>
@@ -110,7 +175,7 @@ input.score{width:60px;text-align:center}
   </div>
 </div>
 
-<!-- ===== Modal: Room ===== -->
+<!-- ===== Room Modal ===== -->
 <div class="modal" id="roomModal">
   <div class="modal-box">
     <h3>เพิ่มห้อง</h3>
@@ -123,54 +188,57 @@ input.score{width:60px;text-align:center}
   </div>
 </div>
 
-<!-- ===== Modal: Score Item ===== -->
+<!-- ===== Score Item Modal ===== -->
 <div class="modal" id="itemModal">
   <div class="modal-box">
-    <h3 id="itemTitle">งาน</h3>
+    <h3 id="itemTitle"></h3>
     <label>ชื่อ</label>
     <input id="itemName">
     <label>คะแนนเต็ม</label>
     <input id="itemMax" type="number">
     <label>ประเภท</label>
     <select id="itemType"></select>
-    <div style="display:flex;justify-content:space-between">
-  <button
-    id="deleteItemBtn"
-    onclick="deleteItem()"
-    style="background:#ef4444;color:#fff;display:none">
-    🗑 ลบงาน
-  </button>
 
-  <div>
-    <button onclick="closeItem()">ยกเลิก</button>
-    <button onclick="saveItem()">บันทึก</button>
+    <div style="display:flex;justify-content:space-between">
+      <button id="deleteItemBtn"
+        style="display:none;background:#ef4444;color:#fff"
+        onclick="deleteItem()">🗑 ลบงาน</button>
+
+      <div>
+        <button onclick="closeItem()">ยกเลิก</button>
+        <button onclick="saveItem()">บันทึก</button>
+      </div>
+    </div>
   </div>
 </div>
 
 <script>
 const API="http://localhost:3000/api";
-let items=[], selectedStudent=null, editItemId=null, scoreTypes=[];
+let items=[], selectedStudent=null, editItemId=null;
 
 /* ===== META ===== */
 async function loadMeta(){
-  const m=await fetch(API+"/meta").then(r=>r.json());
-  year.innerHTML=m.years.map(x=>`<option value="${x.id}">${x.year}</option>`).join('');
-  semester.innerHTML=m.semesters.map(x=>`<option value="${x.id}">${x.name}</option>`).join('');
-  grade.innerHTML=m.grades.map(x=>`<option value="${x.id}">${x.name}</option>`).join('');
-  subject.innerHTML=m.subjects.map(x=>`<option value="${x.id}">${x.name}</option>`).join('');
+  const m = await fetch(API+"/meta").then(r=>r.json());
 
-  scoreTypes = m.score_types;
-  itemType.innerHTML = scoreTypes.map(
-    t=>`<option value="${t.id}">${t.name}</option>`
-  ).join('');
+  year.innerHTML = m.years.map(x=>`<option value="${x.id}">${x.year}</option>`).join('');
+  semester.innerHTML = m.semesters.map(x=>`<option value="${x.id}">${x.name}</option>`).join('');
+  grade.innerHTML = m.grades.map(x=>`<option value="${x.id}">${x.name}</option>`).join('');
+  subject.innerHTML = m.subjects.map(x=>`<option value="${x.id}">${x.name}</option>`).join('');
+
+  /* โหลด score types */
+  const scoreTypes = m.score_types;
+
+itemType.innerHTML = scoreTypes.map(
+  t => `<option value="${t.id}">${t.name}</option>`
+).join('');
 }
 
 /* ===== ROOMS ===== */
 grade.onchange = async()=>{
-  const r=await fetch(API+`/rooms?grade_id=${grade.value}`).then(r=>r.json());
+  const r = await fetch(`${API}/rooms?grade_id=${grade.value}`).then(r=>r.json());
   room.innerHTML = r.length
     ? r.map(x=>`<option value="${x.id}">${x.room_no}</option>`).join('')
-    : `<option value="">— ยังไม่มีห้อง —</option>`;
+    : '';
   loadAll();
 };
 
@@ -180,21 +248,16 @@ grade.onchange = async()=>{
 
 /* ===== LOAD ===== */
 async function loadAll(){
-  if(!grade.value||!room.value||!year.value) return;
+  if(!grade.value||!room.value||!year.value||!subject.value||!semester.value) return;
 
-  items=await fetch(
+  items = await fetch(
     `${API}/score-items?grade_id=${grade.value}&subject_id=${subject.value}&academic_year_id=${year.value}&semester_id=${semester.value}`
   ).then(r=>r.json());
 
   renderHead();
 
-  const students=await fetch(
-    `${API}/students?grade_id=${grade.value}
-&room_id=${room.value}
-&academic_year_id=${year.value}
-&subject_id=${subject.value}
-&semester_id=${semester.value}`
-
+  const students = await fetch(
+    `${API}/students?grade_id=${grade.value}&room_id=${room.value}&academic_year_id=${year.value}&subject_id=${subject.value}&semester_id=${semester.value}`
   ).then(r=>r.json());
 
   renderBody(students);
@@ -203,8 +266,9 @@ async function loadAll(){
 /* ===== TABLE ===== */
 function renderHead(){
   if(items.length===0){
-    groupHead.innerHTML=`
-      <th>เลขที่</th><th>ชื่อ</th>
+    groupHead.innerHTML = `
+      <th>เลขที่</th>
+      <th>ชื่อ</th>
       <th class="group">คะแนน</th>
       <th class="total">รวม</th>
       <th class="grade">เกรด</th>`;
@@ -212,13 +276,14 @@ function renderHead(){
     return;
   }
 
-  const groups = {};
-  items.forEach(i=>{
-    groups[i.type_name] = groups[i.type_name] || [];
-    groups[i.type_name].push(i);
-  });
+  const groups={};
+items.forEach(i=>{
+  const groupName = i.type_name || "อื่นๆ";   // ✅ เพิ่มบรรทัดนี้
+  groups[groupName] = groups[groupName] || [];
+  groups[groupName].push(i);
+});
 
-  groupHead.innerHTML = `
+  groupHead.innerHTML=`
     <th rowspan="2">เลขที่</th>
     <th rowspan="2">ชื่อ</th>
     ${Object.keys(groups).map(
@@ -228,7 +293,7 @@ function renderHead(){
     <th rowspan="2" class="grade">เกรด</th>
   `;
 
-  itemHead.innerHTML = Object.values(groups).flat().map(
+  itemHead.innerHTML=Object.values(groups).flat().map(
     i=>`<th class="clickable"
       onclick="openEditItem(${i.id},'${i.name}',${i.max_score},${i.type_id})">
       ${i.name}<br><small>${i.max_score}</small>
@@ -249,9 +314,10 @@ function renderBody(data){
       <td>${s.code}</td>
       <td style="text-align:left">${s.name}</td>
       ${items.map(it=>`
-        <td><input class="score" value="${s.scores[it.id]||0}"
-        onchange="saveScore(${s.id},${it.id},this.value)"></td>
-      `).join('')}
+        <td><input class="score"
+          value="${s.scores[it.id]||0}"
+          onchange="saveScore(${s.id},${it.id},this.value)">
+        </td>`).join('')}
       <td>${s.percent}</td>
       <td>${s.grade}</td>
     `;
@@ -259,13 +325,14 @@ function renderBody(data){
   });
 }
 
-/* ===== SCORES ===== */
+/* ===== SCORE ===== */
 async function saveScore(student_id,score_item_id,score){
   await fetch(API+"/scores",{
     method:"PUT",
     headers:{'Content-Type':'application/json'},
     body:JSON.stringify({student_id,score_item_id,score})
   });
+  loadAll();
 }
 
 /* ===== STUDENT ===== */
@@ -293,7 +360,11 @@ async function saveStudent(){
   };
   const url=selectedStudent?`${API}/students/${selectedStudent.id}`:`${API}/students`;
   const method=selectedStudent?"PUT":"POST";
-  await fetch(url,{method,headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)});
+  await fetch(url,{
+    method,
+    headers:{'Content-Type':'application/json'},
+    body:JSON.stringify(payload)
+  });
   closeStudent(); loadAll();
 }
 async function deleteStudent(){
@@ -311,29 +382,34 @@ function openAddRoom(){
   roomModal.style.display='flex';
 }
 async function saveRoom(){
-  const payload={ grade_id:grade.value, room_no:roomNo.value };
-  const res = await fetch(API+"/rooms",{
+  await fetch(API+"/rooms",{
     method:"POST",
     headers:{'Content-Type':'application/json'},
-    body:JSON.stringify(payload)
+    body:JSON.stringify({grade_id:grade.value,room_no:roomNo.value})
   });
-  if(!res.ok){
-    const err = await res.json();
-    alert(err.message);
-    return;
-  }
   closeRoom();
-  grade.onchange(); // reload ห้อง
+  grade.onchange();
 }
 function closeRoom(){ roomModal.style.display='none'; }
 
-/* ===== SCORE ITEM ===== */
+/* ===== ITEM ===== */
 function openAddItem(){
-  editItemId=null;
-  itemTitle.innerText="เพิ่มงาน";
-  itemName.value=''; itemMax.value='';
-  deleteItemBtn.style.display = 'none'; // ❌ ไม่มีปุ่มลบ
-  itemModal.style.display='flex';
+  if(
+    !year.value ||
+    !semester.value ||   // ✅ สำคัญ
+    !grade.value ||
+    !subject.value
+  ){
+    alert("กรุณาเลือก ปี / เทอม / ระดับชั้น / วิชา ก่อนเพิ่มงาน");
+    return;
+  }
+
+  editItemId = null;
+  itemTitle.innerText = "เพิ่มงาน";
+  itemName.value = '';
+  itemMax.value = '';
+  deleteItemBtn.style.display = 'none';
+  itemModal.style.display = 'flex';
 }
 
 function openEditItem(id,name,max,type){
@@ -342,24 +418,15 @@ function openEditItem(id,name,max,type){
   itemName.value=name;
   itemMax.value=max;
   itemType.value=type;
-  deleteItemBtn.style.display = 'inline-block'; // ✅ แสดงปุ่มลบ
+  deleteItemBtn.style.display='inline-block';
   itemModal.style.display='flex';
 }
-
 async function deleteItem(){
   if(!editItemId) return;
-  if(!confirm("ต้องการลบงานนี้หรือไม่? คะแนนของนักเรียนจะถูกลบด้วย")) return;
-
-  await fetch(`${API}/score-items/${editItemId}`,{
-    method:"DELETE"
-  });
-
-  editItemId = null;
-  closeItem();
-  loadAll();
+  if(!confirm("ลบงานนี้? คะแนนจะถูกลบด้วย")) return;
+  await fetch(`${API}/score-items/${editItemId}`,{method:"DELETE"});
+  closeItem(); loadAll();
 }
-
-
 async function saveItem(){
   const payload={
     name:itemName.value,
@@ -372,12 +439,26 @@ async function saveItem(){
   };
   const url=editItemId?`${API}/score-items/${editItemId}`:`${API}/score-items`;
   const method=editItemId?"PUT":"POST";
-  await fetch(url,{method,headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)});
+  await fetch(url,{
+    method,
+    headers:{'Content-Type':'application/json'},
+    body:JSON.stringify(payload)
+  });
   closeItem(); loadAll();
 }
 function closeItem(){ itemModal.style.display='none'; }
 
+window.addEventListener("storage", (e) => {
+  if(e.key === "GRADE_UPDATED"){
+    loadAll(); // recalculates grade ใหม่ทันที
+  }
+});
+
+
 loadMeta();
 </script>
+  </main>
+
+</div>
 </body>
 </html>

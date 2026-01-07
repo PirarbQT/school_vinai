@@ -1,224 +1,383 @@
 <!DOCTYPE html>
 <html lang="th">
 <head>
-<meta charset="UTF-8" />
-<title>ระบบจัดการคะแนน</title>
+<meta charset="UTF-8">
+<title>ระบบตัดเกรด</title>
 <link href="https://fonts.googleapis.com/css2?family=Prompt&display=swap" rel="stylesheet">
 
 <style>
 *{box-sizing:border-box;font-family:'Prompt',sans-serif}
-body{margin:0;background:#f5f7fb}
-header{background:#fff;padding:16px 24px;font-weight:600;font-size:20px}
-.container{display:grid;grid-template-columns:320px 1fr;gap:20px;padding:20px}
-.card{background:#fff;border-radius:12px;padding:16px;box-shadow:0 2px 6px rgba(0,0,0,.05)}
-.levels button{margin:4px;padding:6px 14px;border-radius:10px;border:none;background:#eef2ff;cursor:pointer}
-.levels .active{background:#2563eb;color:#fff}
-.assign-item{display:flex;justify-content:space-between;margin-bottom:10px}
-.btn{border:none;border-radius:8px;padding:6px 10px;cursor:pointer}
-.btn-add{background:#0ea5e9;color:#fff}
-.btn-del{background:#fecaca}
+body{margin:0;background:#f3f6f9}
+
+/* ===== Header ===== */
+.header{
+  background:#24384d;color:#fff;
+  padding:14px 24px;
+  display:flex;justify-content:space-between;align-items:center
+}
+.actions button{
+  margin-left:6px;border:none;padding:6px 12px;
+  border-radius:6px;color:#fff;cursor:pointer
+}
+.btn-add{background:#3b82f6}
+.btn-edit{background:#f59e0b}
+.btn-del{background:#ef4444}
+.btn-room{background:#10b981}
+
+/* ===== Filter ===== */
+.filter{
+  background:#fff;margin:16px;padding:12px;border-radius:8px;
+  display:grid;grid-template-columns:repeat(6,1fr);gap:10px
+}
+.filter label{font-size:12px;color:#64748b}
+.filter select{padding:6px;border:1px solid #cbd5e1;border-radius:6px}
+
+/* ===== Table ===== */
+.card{background:#fff;margin:16px;border-radius:8px;overflow:auto}
 table{width:100%;border-collapse:collapse}
-th,td{padding:10px;border-bottom:1px solid #e5e7eb;text-align:center}
-th{background:#e0f2fe}
-input.score{width:60px;padding:6px;border-radius:8px;border:1px solid #cbd5f5;text-align:center}
-.grade{padding:4px 10px;border-radius:999px;color:#fff}
-.grade.A{background:#22c55e}
-.grade.B{background:#10b981}
-.grade.C{background:#3b82f6}
-.grade.D{background:#f59e0b}
-.grade.F{background:#ef4444}
+th,td{border:1px solid #e5e7eb;padding:8px;text-align:center}
+th.group{background:#e0f2fe}
+th.total{background:#fff4c2}
+th.grade{background:#dcfce7}
+th.clickable{cursor:pointer}
+input.score{width:60px;text-align:center}
+
+/* selected */
+#tbody tr.selected{background:#e0f2fe}
+
+/* ===== Modal ===== */
+.modal{
+  display:none;position:fixed;inset:0;
+  background:rgba(0,0,0,.4);
+  justify-content:center;align-items:center
+}
+.modal-box{
+  background:#fff;padding:16px;border-radius:10px;width:360px
+}
+.modal-box h3{margin-top:0}
+.modal-box input, .modal-box select{
+  width:100%;padding:6px;margin-bottom:10px
+}
 </style>
 </head>
 
 <body>
 
-<header>
-🎓 ระบบจัดการคะแนน
-<small style="font-weight:400;color:#64748b"> ป.1 – ม.6</small>
-</header>
-
-<div class="container">
-
-<!-- ซ้าย -->
-<div>
-  <!-- เลือกระดับชั้น -->
-  <div class="card">
-    <h4 id="classTitle">เลือกระดับชั้น: ป.1</h4>
-    <div class="levels">
-      <button class="active" onclick="changeClass('ป.1',this)">ป.1</button>
-      <button onclick="changeClass('ป.2',this)">ป.2</button>
-      <button onclick="changeClass('ป.3',this)">ป.3</button>
-      <button onclick="changeClass('ป.4',this)">ป.4</button>
-      <button onclick="changeClass('ป.5',this)">ป.5</button>
-      <button onclick="changeClass('ป.6',this)">ป.6</button><br>
-      <button onclick="changeClass('ม.1',this)">ม.1</button>
-      <button onclick="changeClass('ม.2',this)">ม.2</button>
-      <button onclick="changeClass('ม.3',this)">ม.3</button>
-      <button onclick="changeClass('ม.4',this)">ม.4</button>
-      <button onclick="changeClass('ม.5',this)">ม.5</button>
-      <button onclick="changeClass('ม.6',this)">ม.6</button>
-    </div>
-  </div>
-
-  <!-- งาน -->
-  <div class="card">
-    <div style="display:flex;justify-content:space-between">
-      <h4>งานที่มอบหมาย</h4>
-      <button class="btn btn-add" onclick="addAssignment()">+ เพิ่มงาน</button>
-    </div>
-    <div id="assignmentList"></div>
+<!-- ===== Header ===== -->
+<div class="header">
+  <div>🎓 ระบบตัดเกรด</div>
+  <div class="actions">
+    <button class="btn-add" onclick="openAddStudent()">➕ นักเรียน</button>
+    <button class="btn-add" onclick="openAddItem()">➕ งาน</button>
+    <button class="btn-room" onclick="openAddRoom()">➕ ห้อง</button>
+    <button class="btn-edit" onclick="openEditStudent()">✏️ แก้ไข</button>
+    <button class="btn-del" onclick="deleteStudent()">🗑 ลบ</button>
   </div>
 </div>
 
-<!-- ขวา -->
+<!-- ===== Filter ===== -->
+<div class="filter">
+  <div><label>ปี</label><select id="year"></select></div>
+  <div><label>เทอม</label><select id="semester"></select></div>
+  <div><label>ระดับชั้น</label><select id="grade"></select></div>
+  <div><label>ห้อง</label><select id="room"></select></div>
+  <div><label>วิชา</label><select id="subject"></select></div>
+</div>
+
+<!-- ===== Table ===== -->
 <div class="card">
-  <div style="display:flex;justify-content:space-between">
-    <h4>รายชื่อนักเรียน</h4>
-    <button class="btn btn-add" onclick="addStudent()">+ เพิ่มนักเรียน</button>
-  </div>
-
-  <table>
-    <thead>
-      <tr id="tableHead"></tr>
-    </thead>
-    <tbody id="students"></tbody>
-  </table>
+<table>
+<thead>
+<tr id="groupHead"></tr>
+<tr id="itemHead"></tr>
+</thead>
+<tbody id="tbody"></tbody>
+</table>
 </div>
 
+<!-- ===== Modal: Student ===== -->
+<div class="modal" id="studentModal">
+  <div class="modal-box">
+    <h3 id="studentTitle">นักเรียน</h3>
+    <label>เลขที่</label>
+    <input id="stdCode">
+    <label>ชื่อ - นามสกุล</label>
+    <input id="stdName">
+    <div style="text-align:right">
+      <button onclick="closeStudent()">ยกเลิก</button>
+      <button onclick="saveStudent()">บันทึก</button>
+    </div>
+  </div>
+</div>
+
+<!-- ===== Modal: Room ===== -->
+<div class="modal" id="roomModal">
+  <div class="modal-box">
+    <h3>เพิ่มห้อง</h3>
+    <label>เลขห้อง</label>
+    <input id="roomNo" type="number">
+    <div style="text-align:right">
+      <button onclick="closeRoom()">ยกเลิก</button>
+      <button onclick="saveRoom()">บันทึก</button>
+    </div>
+  </div>
+</div>
+
+<!-- ===== Modal: Score Item ===== -->
+<div class="modal" id="itemModal">
+  <div class="modal-box">
+    <h3 id="itemTitle">งาน</h3>
+    <label>ชื่อ</label>
+    <input id="itemName">
+    <label>คะแนนเต็ม</label>
+    <input id="itemMax" type="number">
+    <label>ประเภท</label>
+    <select id="itemType"></select>
+    <div style="display:flex;justify-content:space-between">
+  <button
+    id="deleteItemBtn"
+    onclick="deleteItem()"
+    style="background:#ef4444;color:#fff;display:none">
+    🗑 ลบงาน
+  </button>
+
+  <div>
+    <button onclick="closeItem()">ยกเลิก</button>
+    <button onclick="saveItem()">บันทึก</button>
+  </div>
 </div>
 
 <script>
-let currentClass = 'ป.1';
-let assignments = [];
+const API="http://localhost:3000/api";
+let items=[], selectedStudent=null, editItemId=null, scoreTypes=[];
 
-/* เปลี่ยนชั้น */
-function changeClass(cls, btn){
-  currentClass = cls;
-  document.getElementById('classTitle').innerText = `เลือกระดับชั้น: ${cls}`;
-  document.querySelectorAll('.levels button').forEach(b=>b.classList.remove('active'));
-  btn.classList.add('active');
+/* ===== META ===== */
+async function loadMeta(){
+  const m=await fetch(API+"/meta").then(r=>r.json());
+  year.innerHTML=m.years.map(x=>`<option value="${x.id}">${x.year}</option>`).join('');
+  semester.innerHTML=m.semesters.map(x=>`<option value="${x.id}">${x.name}</option>`).join('');
+  grade.innerHTML=m.grades.map(x=>`<option value="${x.id}">${x.name}</option>`).join('');
+  subject.innerHTML=m.subjects.map(x=>`<option value="${x.id}">${x.name}</option>`).join('');
+
+  scoreTypes = m.score_types;
+  itemType.innerHTML = scoreTypes.map(
+    t=>`<option value="${t.id}">${t.name}</option>`
+  ).join('');
+}
+
+/* ===== ROOMS ===== */
+grade.onchange = async()=>{
+  const r=await fetch(API+`/rooms?grade_id=${grade.value}`).then(r=>r.json());
+  room.innerHTML = r.length
+    ? r.map(x=>`<option value="${x.id}">${x.room_no}</option>`).join('')
+    : `<option value="">— ยังไม่มีห้อง —</option>`;
+  loadAll();
+};
+
+['year','semester','room','subject'].forEach(id=>{
+  document.getElementById(id).addEventListener('change',loadAll);
+});
+
+/* ===== LOAD ===== */
+async function loadAll(){
+  if(!grade.value||!room.value||!year.value) return;
+
+  items=await fetch(
+    `${API}/score-items?grade_id=${grade.value}&subject_id=${subject.value}&academic_year_id=${year.value}&semester_id=${semester.value}`
+  ).then(r=>r.json());
+
+  renderHead();
+
+  const students=await fetch(
+    `${API}/students?grade_id=${grade.value}
+&room_id=${room.value}
+&academic_year_id=${year.value}
+&subject_id=${subject.value}
+&semester_id=${semester.value}`
+
+  ).then(r=>r.json());
+
+  renderBody(students);
+}
+
+/* ===== TABLE ===== */
+function renderHead(){
+  if(items.length===0){
+    groupHead.innerHTML=`
+      <th>เลขที่</th><th>ชื่อ</th>
+      <th class="group">คะแนน</th>
+      <th class="total">รวม</th>
+      <th class="grade">เกรด</th>`;
+    itemHead.innerHTML='';
+    return;
+  }
+
+  const groups = {};
+  items.forEach(i=>{
+    groups[i.type_name] = groups[i.type_name] || [];
+    groups[i.type_name].push(i);
+  });
+
+  groupHead.innerHTML = `
+    <th rowspan="2">เลขที่</th>
+    <th rowspan="2">ชื่อ</th>
+    ${Object.keys(groups).map(
+      g=>`<th colspan="${groups[g].length}" class="group">${g}</th>`
+    ).join('')}
+    <th rowspan="2" class="total">รวม</th>
+    <th rowspan="2" class="grade">เกรด</th>
+  `;
+
+  itemHead.innerHTML = Object.values(groups).flat().map(
+    i=>`<th class="clickable"
+      onclick="openEditItem(${i.id},'${i.name}',${i.max_score},${i.type_id})">
+      ${i.name}<br><small>${i.max_score}</small>
+    </th>`
+  ).join('');
+}
+
+function renderBody(data){
+  tbody.innerHTML='';
+  data.forEach(s=>{
+    const tr=document.createElement('tr');
+    tr.onclick=()=>{
+      document.querySelectorAll('#tbody tr').forEach(x=>x.classList.remove('selected'));
+      tr.classList.add('selected');
+      selectedStudent=s;
+    };
+    tr.innerHTML=`
+      <td>${s.code}</td>
+      <td style="text-align:left">${s.name}</td>
+      ${items.map(it=>`
+        <td><input class="score" value="${s.scores[it.id]||0}"
+        onchange="saveScore(${s.id},${it.id},this.value)"></td>
+      `).join('')}
+      <td>${s.percent}</td>
+      <td>${s.grade}</td>
+    `;
+    tbody.appendChild(tr);
+  });
+}
+
+/* ===== SCORES ===== */
+async function saveScore(student_id,score_item_id,score){
+  await fetch(API+"/scores",{
+    method:"PUT",
+    headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({student_id,score_item_id,score})
+  });
+}
+
+/* ===== STUDENT ===== */
+function openAddStudent(){
+  if(!room.value) return alert("กรุณาเลือกห้องก่อน");
+  selectedStudent=null;
+  studentTitle.innerText="เพิ่มนักเรียน";
+  stdCode.value=''; stdName.value='';
+  studentModal.style.display='flex';
+}
+function openEditStudent(){
+  if(!selectedStudent) return alert("เลือกนักเรียนก่อน");
+  studentTitle.innerText="แก้ไขนักเรียน";
+  stdCode.value=selectedStudent.code;
+  stdName.value=selectedStudent.name;
+  studentModal.style.display='flex';
+}
+async function saveStudent(){
+  const payload={
+    code:stdCode.value,
+    name:stdName.value,
+    grade_id:grade.value,
+    room_id:room.value,
+    academic_year_id:year.value
+  };
+  const url=selectedStudent?`${API}/students/${selectedStudent.id}`:`${API}/students`;
+  const method=selectedStudent?"PUT":"POST";
+  await fetch(url,{method,headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)});
+  closeStudent(); loadAll();
+}
+async function deleteStudent(){
+  if(!selectedStudent) return alert("เลือกนักเรียนก่อน");
+  if(!confirm("ลบนักเรียน?")) return;
+  await fetch(`${API}/students/${selectedStudent.id}`,{method:"DELETE"});
+  selectedStudent=null; loadAll();
+}
+function closeStudent(){ studentModal.style.display='none'; }
+
+/* ===== ROOM ===== */
+function openAddRoom(){
+  if(!grade.value) return alert("กรุณาเลือกระดับชั้นก่อน");
+  roomNo.value='';
+  roomModal.style.display='flex';
+}
+async function saveRoom(){
+  const payload={ grade_id:grade.value, room_no:roomNo.value };
+  const res = await fetch(API+"/rooms",{
+    method:"POST",
+    headers:{'Content-Type':'application/json'},
+    body:JSON.stringify(payload)
+  });
+  if(!res.ok){
+    const err = await res.json();
+    alert(err.message);
+    return;
+  }
+  closeRoom();
+  grade.onchange(); // reload ห้อง
+}
+function closeRoom(){ roomModal.style.display='none'; }
+
+/* ===== SCORE ITEM ===== */
+function openAddItem(){
+  editItemId=null;
+  itemTitle.innerText="เพิ่มงาน";
+  itemName.value=''; itemMax.value='';
+  deleteItemBtn.style.display = 'none'; // ❌ ไม่มีปุ่มลบ
+  itemModal.style.display='flex';
+}
+
+function openEditItem(id,name,max,type){
+  editItemId=id;
+  itemTitle.innerText="แก้ไขงาน";
+  itemName.value=name;
+  itemMax.value=max;
+  itemType.value=type;
+  deleteItemBtn.style.display = 'inline-block'; // ✅ แสดงปุ่มลบ
+  itemModal.style.display='flex';
+}
+
+async function deleteItem(){
+  if(!editItemId) return;
+  if(!confirm("ต้องการลบงานนี้หรือไม่? คะแนนของนักเรียนจะถูกลบด้วย")) return;
+
+  await fetch(`${API}/score-items/${editItemId}`,{
+    method:"DELETE"
+  });
+
+  editItemId = null;
+  closeItem();
   loadAll();
 }
 
-/* โหลดทั้งหมด */
-async function loadAll(){
-  await loadAssignments();
-  await loadStudents();
+
+async function saveItem(){
+  const payload={
+    name:itemName.value,
+    max_score:itemMax.value,
+    type_id:itemType.value,
+    grade_id:grade.value,
+    subject_id:subject.value,
+    academic_year_id:year.value,
+    semester_id:semester.value
+  };
+  const url=editItemId?`${API}/score-items/${editItemId}`:`${API}/score-items`;
+  const method=editItemId?"PUT":"POST";
+  await fetch(url,{method,headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)});
+  closeItem(); loadAll();
 }
+function closeItem(){ itemModal.style.display='none'; }
 
-/* งาน */
-async function loadAssignments(){
-  const res = await fetch(`http://localhost:3000/api/assignments?class=${currentClass}`);
-  assignments = await res.json();
-
-  const list = document.getElementById('assignmentList');
-  list.innerHTML = '';
-
-  assignments.forEach(a=>{
-    list.innerHTML += `
-      <div class="assign-item">
-        <div>${a.name}<br><small>${a.max_score} คะแนน</small></div>
-        <button class="btn btn-del" onclick="deleteAssignment(${a.id})">🗑️</button>
-      </div>
-    `;
-  });
-
-  const head = document.getElementById('tableHead');
-  head.innerHTML = `
-    <th>ลำดับ</th>
-    <th>รหัส</th>
-    <th>ชื่อ-สกุล</th>
-  `;
-
-  assignments.forEach(a=>{
-    head.innerHTML += `<th>${a.name}</th>`;
-  });
-
-  head.innerHTML += `<th>%</th><th>เกรด</th><th>จัดการ</th>`;
-}
-
-/* นักเรียน */
-async function loadStudents(){
-  const res = await fetch(`http://localhost:3000/api/students?class=${currentClass}`);
-  const data = await res.json();
-  const tb = document.getElementById('students');
-  tb.innerHTML = '';
-
-  data.forEach((s,i)=>{
-    let row = `
-      <tr>
-        <td>${i+1}</td>
-        <td>${s.code}</td>
-        <td>${s.name}</td>
-    `;
-
-    assignments.forEach(a=>{
-      const sc = s.scores.find(x=>x.id===a.id);
-      row += `
-        <td>
-          <input class="score" value="${sc?.score||0}"
-            onchange="saveScore(${s.id},${a.id},this.value)">
-        </td>`;
-    });
-
-    row += `
-      <td>${s.percent}%</td>
-      <td><span class="grade ${s.grade}">${s.grade}</span></td>
-      <td><button class="btn btn-del" onclick="delStudent(${s.id})">🗑️</button></td>
-      </tr>`;
-    tb.innerHTML += row;
-  });
-}
-
-/* CRUD */
-async function saveScore(student_id, assignment_id, score){
-  await fetch('http://localhost:3000/api/scores',{
-    method:'PUT',
-    headers:{'Content-Type':'application/json'},
-    body: JSON.stringify({ student_id, assignment_id, score })
-  });
-}
-
-async function addAssignment(){
-  const name = prompt("ชื่องาน");
-  const max = prompt("คะแนนเต็ม");
-  if(!name || !max) return;
-
-  await fetch('http://localhost:3000/api/assignments',{
-    method:'POST',
-    headers:{'Content-Type':'application/json'},
-    body: JSON.stringify({ name, max_score:max, className:currentClass })
-  });
-
-  loadAll(); // 🔥 ดีกว่า loadAssignments()
-}
-
-async function deleteAssignment(id){
-  if(!confirm("ลบงานนี้?")) return;
-  await fetch(`http://localhost:3000/api/assignments/${id}`,{method:'DELETE'});
-  loadAssignments();
-}
-
-async function addStudent(){
-  const code = prompt("รหัส");
-  const name = prompt("ชื่อ");
-  if(!code||!name) return;
-  await fetch('http://localhost:3000/api/students',{
-    method:'POST',
-    headers:{'Content-Type':'application/json'},
-    body: JSON.stringify({code,name,className:currentClass})
-  });
-  loadStudents();
-}
-
-async function delStudent(id){
-  if(!confirm("ลบนักเรียน?")) return;
-  await fetch(`http://localhost:3000/api/students/${id}`,{method:'DELETE'});
-  loadStudents();
-}
-
-loadAll();
+loadMeta();
 </script>
-
 </body>
 </html>

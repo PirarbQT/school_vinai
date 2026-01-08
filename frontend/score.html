@@ -231,7 +231,13 @@ async function loadMeta(){
 itemType.innerHTML = scoreTypes.map(
   t => `<option value="${t.id}">${t.name}</option>`
 ).join('');
+
+  if (grade.value) {
+    await grade.onchange();   // โหลดห้องของชั้นแรก
+  }
 }
+
+
 
 /* ===== ROOMS ===== */
 grade.onchange = async()=>{
